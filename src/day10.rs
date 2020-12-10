@@ -1,62 +1,57 @@
+use itertools::sorted;
+use std::iter::once;
+
+
 #[aoc(day10, part1)]
 pub fn solve_part1(input: &str) -> i32 {
-    let mut voltages: Vec<i32> = input.lines().map(|l| l.parse::<i32>().unwrap()).collect();
-    voltages.push(0);
-    voltages.sort();
-    let mut iter = voltages.iter().peekable();
-    let mut count1: i32 = 0;
-    let mut count3: i32 = 0;
-    while let Some(voltage) = iter.next() {
-        if let Some(next_voltage) = iter.peek() {
-            match *next_voltage - *voltage {
-                1 => count1 += 1,
-                3 => count3 += 1,
-                _ => panic!()
-            }
-        }
-    }
-    count3 += 1;
-    return count1 * count3;
+    sorted(
+        input
+            .lines()
+            .map(|l| l.parse::<i32>().unwrap())
+            // Implicit outlet has 0 jolt rating 
+            .chain(once(0)),
+    )
+    .collect::<Vec<i32>>()
+    // Compuate joltage differences
+    .windows(2)
+    .map(|w| w[1] - w[0])
+    // Implicit device's built-in adapter is +3
+    .chain(once(3))
+    // Accumulate a tuple of [count of diff 1, count of diff 3]
+    .fold([0; 2], |acc, d| match d {
+        1 => [acc[0] + 1, acc[1]],
+        2 => acc,
+        3 => [acc[0], acc[1] + 1],
+        _ => panic!(),
+    })
+    .iter()
+    // Take the product of (count of diff 1) x (count of diff 2)
+    .product()
 }
-
 
 #[aoc(day10, part2)]
 pub fn solve_part2(input: &str) -> i64 {
-    let mut voltages: Vec<i32> = input.lines().map(|l| l.parse::<i32>().unwrap()).collect();
-    voltages.push(0);
-    voltages.push(voltages.iter().max().unwrap() + 3);
-    voltages.sort();
-    let deltas = &voltages.windows(2).map(|w| w[1] - w[0]).collect::<Vec<_>>();
-
-    let mut agg0:i64 = 1;
-    let mut agg1:i64 = 0;
-    let mut agg2:i64 = 0;
-
-    for delta in deltas.iter() {
-        let new_agg0:i64;
-        let new_agg1:i64;
-        let new_agg2:i64;
-        match delta {
-            1 => {
-                new_agg0 = /* add 1 */ agg2;
-                new_agg1 = /* terminate and start new */ agg0 + agg1 + agg2;
-                new_agg2 = /* add 1 */ agg1;
-            },
-            2 => {
-                new_agg0 = /* add 2 */ agg1;
-                new_agg1 = 0;
-                new_agg2 = /* terminate and start new */ agg0 + agg1 + agg2
-            },
-            3 => {
-                new_agg0 = /* terminate and start new */ agg0 + agg1 + agg2;
-                new_agg1 = 0;
-                new_agg2 = 0;
-            },
-            _ => panic!(),
-        }
-        agg0 = new_agg0;
-        agg1 = new_agg1;
-        agg2 = new_agg2;
-    }
-    return agg0 + agg1 + agg2;
+    sorted(
+        input
+            .lines()
+            .map(|l| l.parse::<i32>().unwrap())
+            // Implicit outlet has 0 jolt rating 
+            .chain(once(0)),
+    )
+    .collect::<Vec<i32>>()
+    // Compute joltage differences
+    .windows(2)
+    .map(|w| w[1] - w[0])
+    // Implicit device's built-in adapter is +3
+    .chain(once(3))
+    // acc is a tuple of running counts where acc[x] is the number of ways
+    // one can get to the current delta `d` with an active group having sum `x`.
+    .fold([1, 0, 0], |acc, d| match d {
+        1 => [acc[2], acc.iter().sum(), acc[1]],
+        2 => [acc[1], 0, acc.iter().sum()],
+        3 => [acc.iter().sum(), 0, 0],
+        _ => panic!(),
+    })
+    .iter()
+    .sum()
 }
