@@ -4,6 +4,8 @@ const OCCUPIED: char = '#';
 const EMPTY: char = 'L';
 const FLOOR: char = '.';
 
+const ADJ: [(i32, i32); 8] = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)];
+
 #[aoc(day11, part1)]
 pub fn solve_part1(input: &str) -> i32 {
     let mut hash_map: HashMap<(i32, i32), char> = HashMap::new();
@@ -17,33 +19,23 @@ pub fn solve_part1(input: &str) -> i32 {
         for ((i ,j), c) in hash_map.iter() {
             match *c {
                 EMPTY => {
-                    let should_become_occupied = (-1i32..2).all(|di| {
-                        (-1i32..2).all(|dj| {
-                            if di == 0 && dj == 0 {
-                                return true;
-                            }
-                            match hash_map.get(&(i + di, j + dj)) {
-                                Some(&OCCUPIED) => false,
-                                _ => true,
-                            }
-                        })
+                    let should_become_occupied = ADJ.iter().all(|(di, dj)| {
+                        match hash_map.get(&(i + di, j + dj)) {
+                            Some(&OCCUPIED) => false,
+                            _ => true,
+                        }
                     });
                     if should_become_occupied {
                         updates.insert((*i, *j), OCCUPIED);
                     }
                 },
                 OCCUPIED => {
-                    let occupied_count: i32 = (-1i32..2).map(|di| {
-                        (-1i32..2).map(|dj| {
-                            if di == 0 && dj == 0 {
-                                return 0;
-                            }
-                            match hash_map.get(&(i + di, j + dj)) {
-                                Some(&OCCUPIED) => 1i32,
-                                _ => 0i32,
-                            }
-                        }).sum::<i32>()
-                    }).sum();
+                    let occupied_count: i32 = ADJ.iter().map(|(di, dj)| {
+                        match hash_map.get(&(i + di, j + dj)) {
+                            Some(&OCCUPIED) => 1i32,
+                            _ => 0i32,
+                        }
+                    }).sum::<i32>();
                     if occupied_count >= 4 {
                         updates.insert((*i, *j), EMPTY);
                     }
@@ -76,45 +68,35 @@ pub fn solve_part2(input: &str) -> i32 {
         for ((i ,j), c) in hash_map.iter() {
             match *c {
                 EMPTY => {
-                    let should_become_occupied = (-1i32..2).all(|di| {
-                        (-1i32..2).all(|dj| {
-                            if di == 0 && dj == 0 {
-                                return true;
-                            }
-                            let mut doi = di;
-                            let mut doj = dj;
-                            while let Some(&FLOOR) = hash_map.get(&(i + doi, j + doj)) {
-                                doi += di;
-                                doj += dj;
-                            }
-                            match hash_map.get(&(i + doi, j + doj)) {
-                                Some(&OCCUPIED) => false,
-                                _ => true,
-                            }
-                        })
+                    let should_become_occupied = ADJ.iter().all(|(di, dj)| {
+                        let mut doi = *di;
+                        let mut doj = *dj;
+                        while let Some(&FLOOR) = hash_map.get(&(i + doi, j + doj)) {
+                            doi += *di;
+                            doj += *dj;
+                        }
+                        match hash_map.get(&(i + doi, j + doj)) {
+                            Some(&OCCUPIED) => false,
+                            _ => true,
+                        }
                     });
                     if should_become_occupied {
                         updates.insert((*i, *j), OCCUPIED);
                     }
                 },
                 OCCUPIED => {
-                    let occupied_count: i32 = (-1i32..2).map(|di| {
-                        (-1i32..2).map(|dj| {
-                            if di == 0 && dj == 0 {
-                                return 0;
-                            }
-                            let mut doi = di;
-                            let mut doj = dj;
-                            while let Some(&FLOOR) = hash_map.get(&(i + doi, j + doj)) {
-                                doi += di;
-                                doj += dj;
-                            }
-                            match hash_map.get(&(i + doi, j + doj)) {
-                                Some(&OCCUPIED) => 1i32,
-                                _ => 0i32,
-                            }
-                        }).sum::<i32>()
-                    }).sum();
+                    let occupied_count: i32 = ADJ.iter().map(|(di, dj)| {
+                        let mut doi = *di;
+                        let mut doj = *dj;
+                        while let Some(&FLOOR) = hash_map.get(&(i + doi, j + doj)) {
+                            doi += di;
+                            doj += dj;
+                        }
+                        match hash_map.get(&(i + doi, j + doj)) {
+                            Some(&OCCUPIED) => 1i32,
+                            _ => 0i32,
+                        }
+                    }).sum::<i32>();
                     if occupied_count >= 5 {
                         updates.insert((*i, *j), EMPTY);
                     }
