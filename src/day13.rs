@@ -117,6 +117,16 @@ pub fn solve_chinese_remainder_theorem<I: IntoIterator<Item = ChineseRemainder>>
     })
 }
 
+pub fn solve_chinese_remainder_theorem_brute<I: IntoIterator<Item = ChineseRemainder>>(crs: I) -> ChineseRemainder {
+    crs.into_iter().fold(ChineseRemainder {r: 0, m: 1}, |a, b| {
+        let mut r = a.r;
+        while r % b.m != b.r {
+            r += a.m;
+        }
+        ChineseRemainder {r, m: a.m * b.m}
+    })
+}
+
 
 #[aoc(day13, part2)]
 pub fn solve_part2(input: &str) -> i64 {
@@ -131,6 +141,24 @@ pub fn solve_part2(input: &str) -> i64 {
         .map(|(i, b)| (i, b.parse::<i64>().unwrap()))
         .collect();
     solve_chinese_remainder_theorem(
+        bus_data.iter().map(|(i, b)| ChineseRemainder {r: (b - (*i as i64)).rem_euclid(*b), m: *b})
+    ).r
+}
+
+// NB: This is 15% faster than the more complex number theory solution.
+#[aoc(day13, part2, brute)]
+pub fn solve_part2_brute(input: &str) -> i64 {
+    let mut iter = input.lines();
+    iter.next(); // ignore your "earliest timestamp" for this part.
+    let bus_data: Vec<(usize, i64)> = iter
+        .next()
+        .unwrap()
+        .split(',')
+        .enumerate()
+        .filter(|(_, b)| *b != "x")
+        .map(|(i, b)| (i, b.parse::<i64>().unwrap()))
+        .collect();
+    solve_chinese_remainder_theorem_brute(
         bus_data.iter().map(|(i, b)| ChineseRemainder {r: (b - (*i as i64)).rem_euclid(*b), m: *b})
     ).r
 }
