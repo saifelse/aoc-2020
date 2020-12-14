@@ -2,6 +2,7 @@ use itertools::sorted;
 use std::clone::Clone;
 use std::collections::HashSet;
 use std::iter::Iterator;
+use std::str;
 
 trait CloneIterator: Iterator + Clone {}
 
@@ -27,22 +28,30 @@ pub fn solve_part1(input: &str) -> i32 {
     input.lines().map(|l| seat_to_id(l)).max().unwrap()
 }
 
-// This doesn't work because types and memory management are hard.
-// #[aoc(day5, part1, vscan)]
-// pub fn solve_part1_vscan(input: &str) -> i32 {
-//     let data = input.as_bytes();
-//     let mut seat_ids: Vec<i32> = Vec::new();
-//     const width: usize = 10;
-//     let rows = (data.len() + 1) / (width + 1);
-//     let it: Box<dyn CloneIterator<Item = i32>> = Box::new((0..(rows+1)));
-//     for j in 0..width {
-//         let mut maybe_next_iter = it.clone().filter(|i| matches!(data[i * (width + 1) + j], b'B' | b'R')).peekable();
-//         if maybe_next_iter.peek().is_some() {
-//             it = &maybe_next_iter;
-//         }
-//     }
-//     it.next().unwrap()
-// }
+#[aoc(day5, part1, vscan)]
+pub fn solve_part1_vscan(input: &str) -> i32 {
+    let data = input.as_bytes();
+    let width: usize = 10;
+    let rows = (data.len() + 1) / (width + 1);
+    let mut seat_idx: Vec<usize> = Vec::with_capacity(rows);
+    for i in 0..rows {
+        seat_idx.push(i);
+    }
+    let mut max_seat_id = 0;
+    for j in 0..width {
+        let new_seat_idxs: Vec<usize> = seat_idx
+            .iter()
+            .filter(|i| matches!(data[*i * (width + 1) + j], b'B' | b'R'))
+            .map(|u| *u)
+            .collect();
+        max_seat_id *= 2;
+        if new_seat_idxs.len() > 0 {
+            max_seat_id += 1;
+            seat_idx = new_seat_idxs;
+        }
+    }
+    return max_seat_id;
+}
 
 #[aoc(day5, part2)]
 pub fn solve_part2(input: &str) -> i32 {
