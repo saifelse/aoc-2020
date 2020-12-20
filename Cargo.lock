@@ -20,6 +20,8 @@ dependencies = [
  "lazy_static",
  "num-complex",
  "regex",
+ "string-builder",
+ "topological-sort",
 ]
 
 [[package]]
@@ -188,6 +190,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "string-builder"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2bd10a070fb1f2796a288abec42695db4682a82b6f12ffacd60fb8d5ad3a4a12"
+
+[[package]]
 name = "syn"
 version = "1.0.53"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -206,6 +214,12 @@ checksum = "d40c6d1b69745a6ec6fb1ca717914848da4b44ae29d9b3080cbee91d72a69b14"
 dependencies = [
  "lazy_static",
 ]
+
+[[package]]
+name = "topological-sort"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa7c7f42dea4b1b99439786f5633aeb9c14c1b53f75e282803c2ec2ad545873c"
 
 [[package]]
 name = "unicode-xid"
