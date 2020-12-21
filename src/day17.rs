@@ -1,146 +1,121 @@
 use std::collections::HashSet;
+use std::iter::once;
+use std::iter::repeat;
 
 const ACTIVE: char = '#';
 
+pub fn adj_vec_helper(dim_n: i32) -> Vec<Vec<i32>> {
+    match dim_n {
+        0 => [Vec::<i32>::new()].iter().map(|v| v.clone()).collect(),
+        _ => adj_vec_helper(dim_n - 1)
+            .iter()
+            .flat_map(|jk| {
+                [-1, 1, 0].iter().map(move |i| {
+                    jk.iter()
+                        .map(|v| v.clone())
+                        .chain(once(*i))
+                        .collect::<Vec<i32>>()
+                })
+            })
+            .collect(),
+    }
+}
+
+pub fn adj_vec(dim_n: i32) -> Vec<Vec<i32>> {
+    let mut adj = adj_vec_helper(dim_n);
+    adj.remove(adj.len() - 1); // Remove (0, 0, 0)
+    return adj;
+}
+
+pub fn parse(n: usize, input: &str) -> HashSet<Vec<i32>> {
+    input
+        .lines()
+        .enumerate()
+        .flat_map(|(i, l)| l.chars().enumerate().map(move |(j, c)| ((i, j), c)))
+        .filter(|(_, c)| *c == ACTIVE)
+        .map(|((i, j), _)| {
+            repeat(0)
+                .take(n - 2)
+                .chain(once(i as i32))
+                .chain(once(j as i32))
+                .collect()
+        })
+        .collect()
+}
+
+pub fn add(v: &Vec<i32>, dv: &Vec<i32>) -> Vec<i32> {
+    v.iter().enumerate().map(|(i, x)| x + dv[i]).collect()
+}
+
+// If a cube is active and exactly 2 or 3 of its neighbors are also active, the cube remains active.
+// Otherwise, the cube becomes inactive.
+pub fn compute_inactivate(active_set: &HashSet<Vec<i32>>, adj: &Vec<Vec<i32>>) -> Vec<Vec<i32>> {
+    active_set
+        .iter()
+        .filter(|v| {
+            let c = adj
+                .iter()
+                .filter(|dv| active_set.contains(&add(&v, &dv)))
+                .take(4)
+                .count();
+            c < 2 || c > 3
+        })
+        .map(|v| v.clone())
+        .collect()
+}
+
+// If a cube is inactive but exactly 3 of its neighbors are active, the cube becomes active.
+pub fn compute_activate(active_set: &HashSet<Vec<i32>>, adj: &Vec<Vec<i32>>) -> Vec<Vec<i32>> {
+    active_set
+        .iter()
+        // Find all active-adjacent...
+        .flat_map(|v| adj.iter().map(move |dv| add(v, dv)))
+        // ...but inactive cells
+        .filter(|v| !active_set.contains(v))
+        // and deduplicate.
+        .collect::<HashSet<Vec<i32>>>()
+        .iter()
+        // Then filter to those that meet the activation criteria.
+        .filter(|v| {
+            let c = adj
+                .iter()
+                .filter(|dv| active_set.contains(&add(&v, &dv)))
+                .take(4)
+                .count();
+            c == 3
+        })
+        .map(|v| v.clone())
+        .collect()
+}
+
+pub fn run(active_set: &mut HashSet<Vec<i32>>, adj: &Vec<Vec<i32>>) {
+    let to_inactivate: Vec<Vec<i32>> = compute_inactivate(active_set, adj);
+    let to_activate: Vec<Vec<i32>> = compute_activate(active_set, adj);
+    for x in to_activate {
+        active_set.insert(x);
+    }
+    for x in to_inactivate {
+        active_set.remove(&x);
+    }
+}
 
 #[aoc(day17, part1)]
 pub fn solve_part1(input: &str) -> usize {
-    let mut hash_set: HashSet<(i32, i32, i32)> = HashSet::new();
-    for (i, l) in input.lines().enumerate() {
-        for (j, c) in l.chars().enumerate() {
-            if c == ACTIVE {
-                hash_set.insert((i as i32, j as i32, 0));
-            }
-        }
-    }
-    let mut adj: Vec<(i32, i32, i32)> = Vec::new();
-    for i in 0..3 {
-        for j in 0..3 {
-            for k in 0..3 {
-                if i != 1 || j != 1 || k != 1 {
-                    adj.push((i - 1, j - 1, k - 1));
-                }
-            }
-        }
-    }
-
+    let mut active_set = parse(3, input);
+    let adj = adj_vec(3);
     for _ in 0..6 {
-        let mut to_add: Vec<(i32, i32, i32)> = Vec::new();
-        let mut to_rem: Vec<(i32, i32, i32)> = Vec::new();
-
-        for (i, j, k) in hash_set.iter() {
-            let mut count = 0;
-            for (di, dj, dk) in adj.iter() {
-                if hash_set.contains(&(i + di, j + dj, k + dk)) {
-                    count += 1;
-                    if count >= 4 {
-                        to_rem.push((*i, *j, *k));
-                        break;
-                    }
-                }
-            }
-            if count < 2 {
-                to_rem.push((*i, *j, *k));
-            }
-        }
-
-        let to_consider: HashSet<(i32, i32, i32)> = hash_set
-            .iter()
-            .flat_map(|(i, j, k)| adj.iter().map(move |(di, dj, dk)| (*i + *di, *j + *dj, *k + *dk)))
-            .filter(|(i, j, k)| !hash_set.contains(&(*i, *j, *k)))
-            .collect();
-        for (i, j, k) in to_consider.iter() {
-            let mut count = 0;
-            for (di, dj, dk) in adj.iter() {
-                if hash_set.contains(&(i + di, j + dj, k + dk)) {
-                    count += 1;
-                    if count >= 4 {
-                        break;
-                    }
-                }
-            }
-            if count == 3 {
-                to_add.push((*i, *j, *k));
-            }
-        }
-        for x in to_add {
-            hash_set.insert(x);
-        }
-        for x in to_rem {
-            hash_set.remove(&x);
-        }
+        run(&mut active_set, &adj);
     }
-    hash_set.len()
+    active_set.len()
 }
 
 #[aoc(day17, part2)]
 pub fn solve_part2(input: &str) -> usize {
-    let mut hash_set: HashSet<(i32, i32, i32, i32)> = HashSet::new();
-    for (i, l) in input.lines().enumerate() {
-        for (j, c) in l.chars().enumerate() {
-            if c == ACTIVE {
-                hash_set.insert((i as i32, j as i32, 0, 0));
-            }
-        }
-    }
-    let mut adj: Vec<(i32, i32, i32, i32)> = Vec::new();
-    for i in 0..3 {
-        for j in 0..3 {
-            for k in 0..3 {
-                for l in 0..3 {
-                    if i != 1 || j != 1 || k != 1 || l != 1{
-                        adj.push((i - 1, j - 1, k - 1, l - 1));
-                    }
-                }
-            }
-        }
-    }
+    let mut active_set = parse(4, input);
+    let adj = adj_vec(4);
 
     for _ in 0..6 {
-        let mut to_add: Vec<(i32, i32, i32, i32)> = Vec::new();
-        let mut to_rem: Vec<(i32, i32, i32, i32)> = Vec::new();
-
-        for (i, j, k, l) in hash_set.iter() {
-            let mut count = 0;
-            for (di, dj, dk, dl) in adj.iter() {
-                if hash_set.contains(&(i + di, j + dj, k + dk, l + dl)) {
-                    count += 1;
-                    if count >= 4 {
-                        to_rem.push((*i, *j, *k, *l));
-                        break;
-                    }
-                }
-            }
-            if count < 2 {
-                to_rem.push((*i, *j, *k, *l));
-            }
-        }
-
-        let to_consider: HashSet<(i32, i32, i32, i32)> = hash_set
-            .iter()
-            .flat_map(|(i, j, k, l)| adj.iter().map(move |(di, dj, dk, dl)| (*i + *di, *j + *dj, *k + *dk, *l + *dl)))
-            .filter(|(i, j, k, l)| !hash_set.contains(&(*i, *j, *k, *l)))
-            .collect();
-        for (i, j, k, l) in to_consider.iter() {
-            let mut count = 0;
-            for (di, dj, dk, dl) in adj.iter() {
-                if hash_set.contains(&(i + di, j + dj, k + dk, l + dl)) {
-                    count += 1;
-                    if count >= 4 {
-                        break;
-                    }
-                }
-            }
-            if count == 3 {
-                to_add.push((*i, *j, *k, *l));
-            }
-        }
-        for x in to_add {
-            hash_set.insert(x);
-        }
-        for x in to_rem {
-            hash_set.remove(&x);
-        }
+        run(&mut active_set, &adj);
     }
-    hash_set.len()
+    active_set.len()
 }
