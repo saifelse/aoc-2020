@@ -1,5 +1,4 @@
 use std::char;
-use std::collections::HashMap;
 
 // Good enough for part1... but very slow.
 // NB: std::time::Instant can be used to time sections of code.
@@ -51,36 +50,46 @@ struct Node<T> {
 
 struct NodeRing {
     // TODO: Could we replace i64 with a generic?
-    node_map: HashMap<i64, Node<i64>>,
+    node_map: Vec<Node<i64>>,
     curr: i64,
 }
 
 impl NodeRing {
     // TODO: Rewrite this using FromIterator
     pub fn new(vecs: Vec<i64>) -> NodeRing {
+        let mut node_map = Vec::with_capacity(vecs.len());
+        for (i, v) in vecs.iter().enumerate() {
+            let node = Node {
+                elem: *v,
+                next: vecs[(i + 1).rem_euclid(vecs.len())],
+                prev: vecs[(i - 1).rem_euclid(vecs.len())],
+            };
+            node_map.push(node);
+        }
+        // Sort so that to_idx(a.elem) gives the correct index
+        node_map.sort_by(|a, b| a.elem.partial_cmp(&b.elem).unwrap());
+
         NodeRing {
             // Starts at the first node specified
             curr: *vecs.first().unwrap(),
             // Doubly link adjacent nodes
-            node_map: vecs
-                .iter()
-                .enumerate()
-                .map(|(i, v)| {
-                    (
-                        *v,
-                        Node {
-                            elem: *v,
-                            next: vecs[(i + 1).rem_euclid(vecs.len())],
-                            prev: vecs[(i - 1).rem_euclid(vecs.len())],
-                        },
-                    )
-                })
-                .collect(),
+            node_map,
         }
+    }
+    pub fn to_idx(val: i64) -> usize {
+        return (val - 1) as usize;
     }
 
     pub fn get_next(&self, curr: i64) -> i64 {
-        return self.node_map.get(&curr).unwrap().next;
+        return self.find(curr).next;
+    }
+
+    pub fn find_mut(&mut self, val: i64) -> &mut Node<i64> {
+        &mut self.node_map[NodeRing::to_idx(val)]
+    }
+
+    pub fn find(&self, val: i64) -> &Node<i64> {
+        &self.node_map[NodeRing::to_idx(val)]
     }
 
     pub fn run(&mut self) {
@@ -92,8 +101,8 @@ impl NodeRing {
         let m2 = self.get_next(m1);
         let m3 = self.get_next(m2);
         let next = self.get_next(m3);
-        self.node_map.get_mut(&self.curr).unwrap().next = next;
-        self.node_map.get_mut(&next).unwrap().prev = self.curr;
+        self.find_mut(self.curr).next = next;
+        self.find_mut(next).prev = self.curr;
 
         // Find the destination node: first node less than curr.
         let mut dest = self.curr;
@@ -112,10 +121,10 @@ impl NodeRing {
         let destn = self.get_next(dest);
 
         // Splice in the 3 removed nodes: dest -> (m1 -> m2 -> m3 ->) destn
-        self.node_map.get_mut(&dest).unwrap().next = m1;
-        self.node_map.get_mut(&m1).unwrap().prev = dest;
-        self.node_map.get_mut(&m3).unwrap().next = destn;
-        self.node_map.get_mut(&destn).unwrap().prev = m3;
+        self.find_mut(dest).next = m1;
+        self.find_mut(m1).prev = dest;
+        self.find_mut(m3).next = destn;
+        self.find_mut(destn).prev = m3;
 
         // The next iteration repeats with `next`.
         self.curr = next;
@@ -152,13 +161,12 @@ pub fn solve_part1(input: &str) -> String {
         .collect()
 }
 
-#[aoc(day23, part1, linked)]
-pub fn solve_part1_linked(input: &str) -> String {
+#[aoc(day23, part1, linked_vec)]
+pub fn solve_part1_linked_vec(input: &str) -> String {
     let v: Vec<i64> = input
         .chars()
         .map(|c| c.to_digit(10).unwrap() as i64)
         .collect();
-    let len = v.len() as i64;   
     let mut l = NodeRing::new(v);
     for _ in 0..100 {
         l.run();
@@ -170,8 +178,8 @@ pub fn solve_part1_linked(input: &str) -> String {
         .collect()
 }
 
-#[aoc(day23, part2, linked)]
-pub fn solve_part2_linked(input: &str) -> i64 {
+#[aoc(day23, part2, linked_vec)]
+pub fn solve_part2_linked_vec(input: &str) -> i64 {
     let v: Vec<i64> = input
         .chars()
         .map(|c| c.to_digit(10).unwrap() as i64)
